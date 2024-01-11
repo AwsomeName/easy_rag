@@ -1,0 +1,12 @@
+streamlit
+pandas
+numpy
+pypdf
+tqdm
+dataclasses
+python-docx
+torch
+transformers
+sentencepiece
+accelerate
+bitsandbytes
