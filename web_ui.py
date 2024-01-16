@@ -47,7 +47,7 @@ if upload_file:
     # raw_text = [i.text for i in tqdm(all_paras)]
     # print("raw_text:", raw_text)
     print("load done")
-    st.stop()
+    # st.stop()
 
 
 col1, col2 = st.columns(2)
