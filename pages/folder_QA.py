@@ -13,9 +13,12 @@ st.set_page_config(
 )
 
 
+try:
+    kl = st.session_state.kl
+except:
+    pass
 
 # 文件夹目录
-kl = st.session_state.kl
 global_dir = "data_pdf/data1"
 colh1, colh2 = st.columns(2)
 with colh1:
@@ -28,7 +31,6 @@ with colh2:
         print("update done")
 
 
-# streamlit run web_ui.py --server.fileWatcherType none
 df = pd.DataFrame(
    np.random.randn(50, 20),
    columns=('col %d' % i for i in range(20)))
@@ -41,11 +43,16 @@ with col1:
     input_str = st.text_input(label="文本输入", placeholder="输入想要提问的内容, 回车键键提交", max_chars=1000)
     if st.button("提问！"):
         if input_str is not None and len(input_str) >0:
-            output_str, output_df = kl.search_result(input_str)
-            # output_str, output_df = "test", []
-            st.session_state['output_df'] = output_df
+            # output_str, output_df = kl.search_result(input_str)
+            output_df = kl.search_result(input_str)
+            st.session_state['output_df_folder'] = output_df
             with st.expander(label="生成结果", expanded=True):
-                st.markdown(output_str)
+                with st.empty():
+                    # st.markdown(output_str)
+                    st.session_state['output_df_folder'] = output_df
+                    for response, histroy in kl.stream_search():
+                        # st.write(response)
+                        st.markdown(response)
     # st.text_area(label="展示生成内容", placeholder="", height=600)
 
 
@@ -53,11 +60,11 @@ with col2:
     st.header("参考依据")
     if st.session_state.get('output_df') is not None:
 
-        st.dataframe(st.session_state.get('output_df'))  # Same as st.write(df)
+        st.dataframe(st.session_state.get('output_df_folder'))  # Same as st.write(df)
     else:
         st.markdown("""
         ## 说明：
-        1. 在左上角输入`问题`，然后按`enter`提问.
+        1. 在左侧输入`问题`，然后按提问.
         2. 右上角会有`running`字样，表示程序正在运行.
         3. 结束后，会出现文本提取结果和对应的参考依据.
             - 3.1. 左下角文本框是生成的文本.

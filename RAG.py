@@ -13,6 +13,7 @@ import os
 import re
 from transformers import AutoTokenizer, AutoModel
 import torch
+# import pdfplumber
 
 # 对文本进行拆分
 CHUNK_SIZE = 256
@@ -34,6 +35,7 @@ class TransOutput:
 
 
 def transpdf(pdf_path: str, show_progress_bar: bool = False):
+    print("[transpdf1]===============================")
     reader = PdfReader(pdf_path)
     number_of_pages = len(reader.pages)
 
@@ -47,13 +49,40 @@ def transpdf(pdf_path: str, show_progress_bar: bool = False):
         'text': [page2text(i) for i in tqdm(range(number_of_pages), disable=not show_progress_bar)],
         'pageid': range(number_of_pages),
     })
+    if type(pdf_path) != str:
+        pdf_path = pdf_path.name
+        
     res = TransOutput(
         file_name=pdf_path,
         file_type=FileType.PDF,
         text_data=data
     )
+    print("---transpdf1:", res)
     return res
 
+# def transpdf2(pdf_path: str, show_progress_bar: bool = False):
+#     print("[transpdf2]===============================")
+#     reader = pdfplumber.open(pdf_path)
+#     # reader = PdfReader(pdf_path)
+#     number_of_pages = len(reader.pages)
+
+#     def page2text(pageid: int):
+#         page = reader.pages[pageid]
+#         text = page.extract_text()
+#         return text
+
+#     data = pd.DataFrame({
+#         # 'file_Path':pdf_path,
+#         'text': [page2text(i) for i in tqdm(range(number_of_pages), disable=not show_progress_bar)],
+#         'pageid': range(number_of_pages),
+#     })
+#     res = TransOutput(
+#         file_name=pdf_path.name,
+#         file_type=FileType.PDF,
+#         text_data=data
+#     )
+#     print("---transpdf2:", res)
+#     return res
 
 def transdocx(doc_path: str, show_progress_bar: bool = False):
     doc = docx.Document(doc_path)
@@ -283,7 +312,8 @@ class KnowLedge:
 
         return res
 
-    def search_result(self, question_str: str) -> Tuple[str, pd.DataFrame]:
+    # def search_result(self, question_str: str) -> Tuple[str, pd.DataFrame]:
+    def search_result(self, question_str: str):
 
         # question_str = "做集成电路的企业,有什么补贴"#
         question_vector = self.sv.encode_fun([question_str])
@@ -318,17 +348,22 @@ class KnowLedge:
 
         print("-------debug_319:")
         print(text2chatglm)
-        # response = self.gen_model.generate(text2chatglm)
-        try:
-            response, history = self.gen_model.chat(self.gen_tokenizer, text2chatglm, history=[])
-        except:
-            response = "请重试"
-            search_table = []
+        self.text2chatglm = text2chatglm
+        return search_table
+        # # response = self.gen_model.generate(text2chatglm)
+        # try:
+        #     response, history = self.gen_model.chat(self.gen_tokenizer, text2chatglm, history=[])
+        # except:
+        #     response = "请重试"
+        #     search_table = []
             
-        # self.gen_model = AutoModel.from_pretrained(gen_model_name_or_path, trust_remote_code=True, load_in_8bit=True)
-        torch.cuda.empty_cache()
+        # # self.gen_model = AutoModel.from_pretrained(gen_model_name_or_path, trust_remote_code=True, load_in_8bit=True)
+        # torch.cuda.empty_cache()
 
-        return response, search_table
+        # return response, search_table
+    
+    def stream_search(self):
+        return self.gen_model.stream_chat(self.gen_tokenizer, self.text2chatglm)
     
     def tel_QA(self, question_str: str, tel_str: str):
         # doc = docx.Document(file_str)
@@ -387,7 +422,6 @@ class KnowLedge:
         all_trans_data = [i for i in all_trans_data if i.text_data.shape[0] > 0]
         print("all_trans_data:\n", all_trans_data)
         all_trans_data = [chunk_text4TransOutput(i) for i in all_trans_data]
-        # all_trans_data = [chunk_text4TransOutput(i) for i in all_trans_data]
 
         all_vector = [self.sv.encode_fun_plus(i.text_data['chunk_text'].tolist()) for i in all_trans_data]
 

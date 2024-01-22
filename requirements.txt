@@ -12,3 +12,4 @@ accelerate
 bitsandbytes
 fastapi
 uvicorn
+# pdfplumber
