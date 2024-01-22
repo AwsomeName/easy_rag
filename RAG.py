@@ -16,7 +16,7 @@ import torch
 
 # 对文本进行拆分
 CHUNK_SIZE = 256
-CHUNK_SIZE = 512
+# CHUNK_SIZE = 512
 # global_dir = "政策归档文件"
 
 
@@ -226,28 +226,28 @@ class KnowLedge:
 
         self.batch_top_k = batch_top_k
 
-        all_file_list = cal_detail_in_dir(global_dir)
-        all_file_list = [Path(i) for i in all_file_list]
-        all_file_list = [i for i in all_file_list if i.suffix in ['.pdf', '.docx']]
-        all_trans_data = [transfile(i) for i in tqdm(all_file_list)]
-        all_trans_data = [clean_text_data(i) for i in all_trans_data]
-        all_trans_data = [i for i in all_trans_data if i.text_data.shape[0] > 0]
-        # print("all_trans_data:\n", all_trans_data)
+        if global_dir is not None:
 
-        all_trans_data = [chunk_text4TransOutput(i) for i in all_trans_data]
+            all_file_list = cal_detail_in_dir(global_dir)
+            all_file_list = [Path(i) for i in all_file_list]
+            all_file_list = [i for i in all_file_list if i.suffix in ['.pdf', '.docx']]
+            all_trans_data = [transfile(i) for i in tqdm(all_file_list)]
+            all_trans_data = [clean_text_data(i) for i in all_trans_data]
+            all_trans_data = [i for i in all_trans_data if i.text_data.shape[0] > 0]
+            # print("all_trans_data:\n", all_trans_data)
+            all_trans_data = [chunk_text4TransOutput(i) for i in all_trans_data]
+        else:
+            all_file_list = []
+            all_trans_data = []
 
         self.sv = SentenceVector(model_name_or_path=sen_embedding_model_name_or_path)
-
         all_vector = [self.sv.encode_fun_plus(i.text_data['chunk_text'].tolist()) for i in all_trans_data]
-
         self.all_trans_data = all_trans_data
         self.all_vector = all_vector
         
-        # exit()
 
         self.gen_tokenizer = AutoTokenizer.from_pretrained(gen_model_name_or_path, trust_remote_code=True)
         # self.gen_model = AutoModel.from_pretrained(gen_model_name_or_path, trust_remote_code=True, torch_dtype=torch.float16, device_map=auto)
-        # self.gen_model = AutoModel.from_pretrained(gen_model_name_or_path, trust_remote_code=True, load_in_8bit=True, device_map=auto)
         self.gen_model = AutoModel.from_pretrained(gen_model_name_or_path, trust_remote_code=True, load_in_8bit=True)
 
     def search_top_info(self, index: int, question_vector: np.ndarray) -> pd.DataFrame:
@@ -316,7 +316,16 @@ class KnowLedge:
             'context': '\n'.join(search_text_list)
         })
 
-        response, history = self.gen_model.chat(self.gen_tokenizer, text2chatglm, history=[])
+        print("-------debug_319:")
+        print(text2chatglm)
+        # response = self.gen_model.generate(text2chatglm)
+        try:
+            response, history = self.gen_model.chat(self.gen_tokenizer, text2chatglm, history=[])
+        except:
+            response = "请重试"
+            search_table = []
+            
+        # self.gen_model = AutoModel.from_pretrained(gen_model_name_or_path, trust_remote_code=True, load_in_8bit=True)
         torch.cuda.empty_cache()
 
         return response, search_table
@@ -362,7 +371,29 @@ class KnowLedge:
 
         self.all_trans_data = all_trans_data
         self.all_vector = all_vector
+        
+        print("------update file done")
 
+
+    def reset_folder(self, global_dir: str):
+        print("----in folder upload, ", global_dir)
+        all_file_list = cal_detail_in_dir(global_dir)
+        all_file_list = [Path(i) for i in all_file_list]
+        all_file_list = [i for i in all_file_list if i.suffix in ['.pdf', '.docx']]
+        print("-----in upload-dir, all_file_list:")
+        print(all_file_list)
+        all_trans_data = [transfile(i) for i in tqdm(all_file_list)]
+        all_trans_data = [clean_text_data(i) for i in all_trans_data]
+        all_trans_data = [i for i in all_trans_data if i.text_data.shape[0] > 0]
+        print("all_trans_data:\n", all_trans_data)
+        all_trans_data = [chunk_text4TransOutput(i) for i in all_trans_data]
+        # all_trans_data = [chunk_text4TransOutput(i) for i in all_trans_data]
+
+        all_vector = [self.sv.encode_fun_plus(i.text_data['chunk_text'].tolist()) for i in all_trans_data]
+
+        self.all_trans_data = all_trans_data
+        self.all_vector = all_vector
+        print("------update folder done")
 
 if __name__ == "__main__":
     kl = KnowLedge(global_dir="data/data1",
